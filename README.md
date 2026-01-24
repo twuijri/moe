@@ -32,7 +32,10 @@ cd moe
 ```bash
 docker-compose up --build -d
 ```
-*الأمر `-d` يعني تشغيل النظام في الخلفية.*
+*ملاحظة: إذا ظهر لك خطأ "command not found"، جرب الأمر الجديد:*
+```bash
+docker compose up --build -d
+```
 
 ### 3. الدخول للنظام
 افتح المتصفح وادخل على رابط السيرفر أو الـ IP:
