@@ -1,0 +1,22 @@
+node_modules
+.env
+.DS_Store
+*.log
+npm-debug.log*
+
+# Docker
+.wwebjs_auth
+.wwebjs_cache
+whatsapp_session
+
+# Local Data
+data/*
+!data/.gitkeep
+public/site_logo.png
+public/site_logo.jpg
+public/site_logo.jpeg
+public/site_logo.svg
+
+# OS
+.DS_Store
+Thumbs.db
