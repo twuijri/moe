@@ -174,7 +174,7 @@ async function addStudentManual() {
     const name = document.getElementById('manual-name').value;
     const phone = document.getElementById('manual-phone').value;
 
-    if (!name || !phone) return alert('الرجاء ادخال الاسم ورقم الجوال');
+    if (!name || !phone || phone.length < 9) return alert('الرجاء ادخال الاسم ورقم الجوال الصحيح (9 أرقام على الأقل)');
 
     try {
         const res = await fetch(`${getApiBase()}/students`, {

@@ -280,10 +280,16 @@ tenantRouter.get('/students', (req, res) => {
 
 tenantRouter.post('/students', requireAdmin, (req, res) => {
     const { name, phone } = req.body;
+    if (!name || !phone || phone.length < 9) {
+        return res.status(400).json({ error: 'رقم الجوال يجب أن يكون 9 أرقام على الأقل' });
+    }
     try {
         db.addStudent(req.tenantId, name, phone);
         res.json({ success: true });
     } catch (err) {
+        if (err.message.includes('already exists')) {
+            return res.status(400).json({ error: 'رقم الجوال مسجل مسبقاً لهذا الطالب' });
+        }
         res.status(400).json({ error: err.message });
     }
 });
