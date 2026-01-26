@@ -273,6 +273,15 @@ tenantRouter.post('/users', requireAdmin, (req, res) => {
     }
 });
 
+tenantRouter.delete('/users/:id', requireAdmin, (req, res) => {
+    try {
+        db.deleteUser(req.tenantId, req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Students
 tenantRouter.get('/students', (req, res) => {
     const students = db.getAllStudents(req.tenantId);
@@ -292,6 +301,15 @@ tenantRouter.post('/students', requireAdmin, (req, res) => {
             return res.status(400).json({ error: 'رقم الجوال مسجل مسبقاً لهذا الطالب' });
         }
         res.status(400).json({ error: err.message });
+    }
+});
+
+tenantRouter.delete('/students/:id', requireAdmin, (req, res) => {
+    try {
+        db.deleteStudent(req.tenantId, req.params.id);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
