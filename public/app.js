@@ -39,7 +39,6 @@ async function logout() {
 }
 
 // Navigation
-// Navigation
 function showView(viewId) {
     document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
     document.getElementById('view-' + viewId).classList.add('active');
@@ -47,6 +46,11 @@ function showView(viewId) {
     document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
     const navLink = document.getElementById('nav-' + viewId);
     if (navLink) navLink.classList.add('active');
+
+    // Load student selector when viewing send campaign
+    if (viewId === 'send') {
+        loadStudentSelector();
+    }
 }
 
 // --- Socket Events ---
@@ -73,9 +77,12 @@ socket.on('campaign_progress', (data) => {
 // --- Logic ---
 
 // Students
+let studentsData = []; // Global variable to store students for campaign selector
+
 async function fetchStudents() {
     const res = await fetch('/api/students');
     const students = await res.json();
+    studentsData = students; // Store globally
     const tbody = document.getElementById('students-table-body');
     tbody.innerHTML = students.map(s => `
         <tr>
@@ -153,11 +160,43 @@ async function addStudentManual() {
     }
 }
 
+// Student Selection for Campaigns
+function loadStudentSelector() {
+    const selector = document.getElementById('student-selector');
+    if (!studentsData || studentsData.length === 0) {
+        selector.innerHTML = '<p style="color: #999; text-align: center;">لا يوجد طلاب مسجلين</p>';
+        return;
+    }
+
+    selector.innerHTML = studentsData.map(student => `
+        <label style="display: block; padding: 8px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <input type="checkbox" class="student-checkbox" value="${student.id}" checked style="margin-left: 8px;">
+            ${student.name} (${student.phone_number})
+        </label>
+    `).join('');
+}
+
+function selectAllStudents() {
+    document.querySelectorAll('.student-checkbox').forEach(cb => cb.checked = true);
+}
+
+function deselectAllStudents() {
+    document.querySelectorAll('.student-checkbox').forEach(cb => cb.checked = false);
+}
+
 // Campaigns
 async function startCampaign() {
     const name = document.getElementById('campaign-name').value;
     const message = document.getElementById('message-content').value;
     if (!message) return alert('الرجاء كتابة نص الرسالة');
+
+    // Get selected student IDs
+    const selectedIds = Array.from(document.querySelectorAll('.student-checkbox:checked'))
+        .map(cb => parseInt(cb.value));
+
+    if (selectedIds.length === 0) {
+        return alert('الرجاء اختيار طالب واحد على الأقل');
+    }
 
     if (!confirm('هل تريد بدء إرسال الحملة؟')) return;
 
@@ -165,12 +204,12 @@ async function startCampaign() {
         const res = await fetch('/api/campaign', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, message, studentIds: 'all' })
+            body: JSON.stringify({ name, message, studentIds: selectedIds })
         });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
 
-        alert('تم بدء الحملة بنجاح!');
+        alert(`تم بدء الحملة! سيتم إرسال ${data.count} رسالة.`);
         document.getElementById('message-content').value = '';
         showView('campaigns');
         fetchCampaigns();

@@ -133,7 +133,27 @@
                     <input type="text" id="campaign-name" placeholder="اسم الحملة (اختياري)">
                     <textarea id="message-content" rows="4" placeholder="اكتب نص الرسالة هنا..."></textarea>
 
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <!-- Student Selection -->
+                    <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h3 style="margin: 0;">اختر الطلاب:</h3>
+                            <div>
+                                <button onclick="selectAllStudents()"
+                                    style="padding: 5px 10px; font-size: 0.85rem; margin-left: 5px;">✅ تحديد
+                                    الكل</button>
+                                <button onclick="deselectAllStudents()"
+                                    style="padding: 5px 10px; font-size: 0.85rem; background: #666;">❌ إلغاء
+                                    التحديد</button>
+                            </div>
+                        </div>
+                        <div id="student-selector"
+                            style="max-height: 300px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; padding: 10px; background: rgba(0,0,0,0.2);">
+                            <!-- Checkboxes will be populated by JS -->
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
                         <button onclick="startCampaign()">🚀 إرسال الحملة</button>
                     </div>
                 </div>
