@@ -25,7 +25,7 @@ try {
     console.error('Schema check failed:', err);
 }
 
-// Initialize Multi-Tenant Tables
+// Initialize Tables (Will create history if dropped above)
 db.exec(`
     CREATE TABLE IF NOT EXISTS tenants (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,12 +49,11 @@ db.exec(`
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         tenant_id INTEGER,
-        username TEXT NOT NULL,
+        username TEXT NOT NULL UNIQUE,
         password_hash TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'user',
+        role TEXT NOT NULL DEFAULT 'user', -- 'admin' or 'user'
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(tenant_id) REFERENCES tenants(id),
-        UNIQUE(tenant_id, username)
+        FOREIGN KEY(tenant_id) REFERENCES tenants(id)
     );
 
     CREATE TABLE IF NOT EXISTS students (
@@ -71,7 +70,7 @@ db.exec(`
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         tenant_id INTEGER,
         name TEXT NOT NULL,
-        status TEXT DEFAULT 'processing',
+        status TEXT DEFAULT 'processing', -- processing, completed
         total_msg INTEGER DEFAULT 0,
         sent_msg INTEGER DEFAULT 0,
         failed_msg INTEGER DEFAULT 0,
@@ -95,7 +94,7 @@ db.exec(`
     CREATE TABLE IF NOT EXISTS system_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         tenant_id INTEGER,
-        level TEXT NOT NULL,
+        level TEXT NOT NULL, -- INFO, WARN, ERROR
         message TEXT NOT NULL,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(tenant_id) REFERENCES tenants(id)
@@ -110,33 +109,30 @@ db.exec(`
     );
 `);
 
-// Create Default Super Admin
+// Create Default Super Admin if not exists
 const superAdmin = db.prepare('SELECT * FROM super_admins WHERE username = ?').get('superadmin');
 if (!superAdmin) {
     const hash = bcrypt.hashSync('SuperAdmin@123', 10);
     db.prepare('INSERT INTO super_admins (username, password_hash) VALUES (?, ?)').run('superadmin', hash);
-    console.log('✅ Default Super Admin created: superadmin / SuperAdmin@123');
+    console.log('Default Super Admin created: superadmin / SuperAdmin@123');
 }
 
 module.exports = {
-    // ===== SUPER ADMIN METHODS =====
+    // === SUPER ADMIN METHODS ===
     getSuperAdminByUsername: (username) => {
         return db.prepare('SELECT * FROM super_admins WHERE username = ?').get(username);
     },
 
-    // ===== TENANT MANAGEMENT =====
+    // === TENANT METHODS ===
     getAllTenants: () => {
         return db.prepare('SELECT * FROM tenants ORDER BY created_at DESC').all();
     },
-
     getTenantBySlug: (slug) => {
         return db.prepare('SELECT * FROM tenants WHERE slug = ?').get(slug);
     },
-
     getTenantById: (id) => {
         return db.prepare('SELECT * FROM tenants WHERE id = ?').get(id);
     },
-
     createTenant: (slug, name, adminUsername, adminPassword, phoneNumber, subscriptionDays = 30) => {
         const hash = bcrypt.hashSync(adminPassword, 10);
         const subscriptionEnd = new Date();
@@ -147,22 +143,17 @@ module.exports = {
             VALUES (?, ?, ?, ?, ?, ?)
         `).run(slug, name, adminUsername, hash, phoneNumber, subscriptionEnd.toISOString().split('T')[0]);
     },
-
     updateTenant: (id, data) => {
-        const { slug, name, adminUsername, adminPasswordHash, phoneNumber, subscriptionEnd, isActive } = data;
+        const { name, phoneNumber, subscriptionEnd, isActive } = data;
         return db.prepare(`
             UPDATE tenants 
-            SET slug = COALESCE(?, slug),
-                name = COALESCE(?, name),
-                admin_username = COALESCE(?, admin_username),
-                admin_password_hash = COALESCE(?, admin_password_hash),
+            SET name = COALESCE(?, name),
                 phone_number = COALESCE(?, phone_number),
                 subscription_end = COALESCE(?, subscription_end),
                 is_active = COALESCE(?, is_active)
             WHERE id = ?
-        `).run(slug, name, adminUsername, adminPasswordHash, phoneNumber, subscriptionEnd, isActive, id);
+        `).run(name, phoneNumber, subscriptionEnd, isActive, id);
     },
-
     extendTenantSubscription: (id, additionalDays) => {
         const tenant = db.prepare('SELECT subscription_end FROM tenants WHERE id = ?').get(id);
         if (!tenant) throw new Error('Tenant not found');
@@ -175,13 +166,11 @@ module.exports = {
         return db.prepare('UPDATE tenants SET subscription_end = ?, is_active = 1 WHERE id = ?')
             .run(baseDate.toISOString().split('T')[0], id);
     },
-
     deactivateTenant: (id) => {
         return db.prepare('UPDATE tenants SET is_active = 0 WHERE id = ?').run(id);
     },
-
     deleteTenant: (id) => {
-        // Cascade delete all tenant data
+        // WARNING: This will cascade delete all tenant data
         db.prepare('DELETE FROM settings WHERE tenant_id = ?').run(id);
         db.prepare('DELETE FROM system_logs WHERE tenant_id = ?').run(id);
         db.prepare('DELETE FROM history WHERE tenant_id = ?').run(id);
@@ -190,7 +179,6 @@ module.exports = {
         db.prepare('DELETE FROM users WHERE tenant_id = ?').run(id);
         return db.prepare('DELETE FROM tenants WHERE id = ?').run(id);
     },
-
     getTenantSubscriptionDaysLeft: (tenantId) => {
         const tenant = db.prepare('SELECT subscription_end FROM tenants WHERE id = ?').get(tenantId);
         if (!tenant) return null;
@@ -202,7 +190,7 @@ module.exports = {
         return diffDays;
     },
 
-    // ===== SETTINGS (Tenant-Aware) =====
+    // === SETTINGS METHODS (Tenant-Aware) ===
     getSettings: (tenantId) => {
         const rows = db.prepare('SELECT * FROM settings WHERE tenant_id = ?').all(tenantId);
         return rows.reduce((acc, row) => {
@@ -210,7 +198,6 @@ module.exports = {
             return acc;
         }, {});
     },
-
     updateSetting: (tenantId, key, value) => {
         return db.prepare(`
             INSERT INTO settings (tenant_id, key, value) VALUES (?, ?, ?) 
@@ -218,58 +205,52 @@ module.exports = {
         `).run(tenantId, key, value, value);
     },
 
-    // ===== SYSTEM LOGS (Tenant-Aware) =====
+    // === SYSTEM LOG METHODS (Tenant-Aware) ===
     addSystemLog: (tenantId, level, message) => {
         db.prepare('INSERT INTO system_logs (tenant_id, level, message) VALUES (?, ?, ?)')
             .run(tenantId, level, message);
     },
-
     getSystemLogs: (tenantId, limit = 100) => {
         return db.prepare('SELECT * FROM system_logs WHERE tenant_id = ? ORDER BY timestamp DESC LIMIT ?')
             .all(tenantId, limit);
     },
 
-    // ===== USERS (Tenant-Aware) =====
+    // === USER METHODS (Tenant-Aware) ===
     getUserByUsername: (tenantId, username) => {
         return db.prepare('SELECT * FROM users WHERE tenant_id = ? AND username = ?').get(tenantId, username);
     },
-
     getAllUsers: (tenantId) => {
         return db.prepare('SELECT id, username, role, created_at FROM users WHERE tenant_id = ?').all(tenantId);
     },
-
     createUser: (tenantId, username, password, role = 'user') => {
         const hash = bcrypt.hashSync(password, 10);
         try {
             return db.prepare('INSERT INTO users (tenant_id, username, password_hash, role) VALUES (?, ?, ?, ?)')
                 .run(tenantId, username, hash, role);
         } catch (err) {
-            if (err.message.includes('UNIQUE constraint')) throw new Error('Username already exists');
+            if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') throw new Error('Username exists');
             throw err;
         }
     },
-
     deleteUser: (tenantId, userId) => {
         return db.prepare('DELETE FROM users WHERE tenant_id = ? AND id = ?').run(tenantId, userId);
     },
 
-    // ===== STUDENTS (Tenant-Aware) =====
+    // === STUDENT METHODS (Tenant-Aware) ===
     getAllStudents: (tenantId) => {
         return db.prepare('SELECT * FROM students WHERE tenant_id = ? ORDER BY created_at DESC').all(tenantId);
     },
-
     addStudent: (tenantId, name, phone) => {
         try {
             return db.prepare('INSERT INTO students (tenant_id, name, phone_number) VALUES (?, ?, ?)')
                 .run(tenantId, name, phone);
         } catch (err) {
-            if (err.message.includes('UNIQUE constraint')) {
+            if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
                 throw new Error('Phone number already exists for this tenant');
             }
             throw err;
         }
     },
-
     addStudentsBulk: (tenantId, students) => {
         const insert = db.prepare('INSERT INTO students (tenant_id, name, phone_number) VALUES (?, ?, ?)');
         let added = 0, skipped = 0;
@@ -279,55 +260,40 @@ module.exports = {
                 insert.run(tenantId, student.name, student.phone);
                 added++;
             } catch (err) {
-                if (err.message.includes('UNIQUE constraint')) {
+                if (err.message.includes('UNIQUE constraint failed')) { // Specific error for unique constraint
                     skipped++;
                 } else {
                     throw err;
                 }
             }
-        }
-        return { added, skipped };
-    },
-
-    deleteStudent: (tenantId, studentId) => {
-        return db.prepare('DELETE FROM students WHERE tenant_id = ? AND id = ?').run(tenantId, studentId);
-    },
-
-    // ===== CAMPAIGNS (Tenant-Aware) =====
-    createCampaign: (tenantId, name, totalMsg, createdBy) => {
-        return db.prepare(`
-            INSERT INTO campaigns (tenant_id, name, total_msg, created_by) 
-            VALUES (?, ?, ?, ?)
-        `).run(tenantId, name, totalMsg, createdBy);
-    },
-
-    getCampaigns: (tenantId) => {
-        return db.prepare('SELECT * FROM campaigns WHERE tenant_id = ? ORDER BY created_at DESC').all(tenantId);
-    },
-
-    updateCampaignStats: (tenantId, campaignId, type) => {
-        const field = type === 'sent' ? 'sent_msg' : 'failed_msg';
-        return db.prepare(`UPDATE campaigns SET ${field} = ${field} + 1 WHERE tenant_id = ? AND id = ?`)
-            .run(tenantId, campaignId);
-    },
-
-    getCampaignHistory: (tenantId, campaignId) => {
-        return db.prepare('SELECT * FROM history WHERE tenant_id = ? AND campaign_id = ? ORDER BY timestamp DESC')
-            .all(tenantId, campaignId);
-    },
-
-    getFailedRecipients: (tenantId, campaignId) => {
-        return db.prepare(`
-            SELECT DISTINCT recipient, message 
+            updateCampaignStats: (id, status) => {
+                // status: 'sent' or 'failed'
+                if (status === 'sent') {
+                    db.prepare('UPDATE campaigns SET sent_msg = sent_msg + 1 WHERE id = ?').run(id);
+                } else {
+                    db.prepare('UPDATE campaigns SET failed_msg = failed_msg + 1 WHERE id = ?').run(id);
+                }
+            },
+                getFailedRecipients: (campaignId) => {
+                    // Get unique recipients who FAILED and did NOT succeed later (simplified: just get all failed attempts? 
+                    // Strategy: Get distinct recipient who has NO 'SENT' status in this campaign.
+                    const stmt = db.prepare(`
+            SELECT DISTINCT recipient 
             FROM history 
-            WHERE tenant_id = ? AND campaign_id = ? AND status LIKE 'FAILED%'
-        `).all(tenantId, campaignId);
-    },
+            WHERE campaign_id = ? AND recipient NOT IN (
+                SELECT recipient FROM history WHERE campaign_id = ? AND status = 'SENT'
+            )
+         `);
+                    return stmt.all(campaignId, campaignId);
+                },
 
-    logMessage: (tenantId, campaignId, recipient, message, status) => {
-        return db.prepare(`
-            INSERT INTO history (tenant_id, campaign_id, recipient, message, status) 
-            VALUES (?, ?, ?, ?, ?)
-        `).run(tenantId, campaignId, recipient, message, status);
-    }
-};
+                    // History Methods
+                    logMessage: (campaignId, recipient, message, status) => {
+                        const stmt = db.prepare('INSERT INTO history (campaign_id, recipient, message, status) VALUES (?, ?, ?, ?)');
+                        return stmt.run(campaignId, recipient, message, status);
+                    },
+                        getRecentHistory: (limit = 50) => {
+                            const stmt = db.prepare('SELECT * FROM history ORDER BY timestamp DESC LIMIT ?');
+                            return stmt.all(limit);
+                        }
+        };

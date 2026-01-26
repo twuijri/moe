@@ -4,311 +4,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>واتس اب المدارس</title>
-    <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <script src="/socket.io/socket.io.js"></script>
+    <title>واتس اب المدارس الذكي - SaaS</title>
+    <link rel="stylesheet" href="/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        /* New Nav Styles */
-        .nav-link {
-            display: block;
-            padding: 10px;
-            color: #aaa;
-            text-decoration: none;
-            transition: 0.3s;
-            cursor: pointer;
-            border-radius: 8px;
-            margin-bottom: 5px;
-        }
-
-        .nav-link:hover,
-        .nav-link.active {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-        }
-
-        /* Hide sections by default */
-        .view-section {
-            display: none;
-        }
-
-        .view-section.active {
-            display: block;
-        }
-
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 100;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal-content {
-            background: #202c33;
-            padding: 20px;
-            border-radius: 10px;
-            width: 400px;
+        .hero-section {
             text-align: center;
-            border: 1px solid var(--glass-border);
+            padding: 4rem 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1.5rem;
+            line-height: 1.2;
+        }
+
+        .hero-desc {
+            font-size: 1.2rem;
+            color: #ccc;
+            margin-bottom: 3rem;
+            line-height: 1.8;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2rem;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .cta-btn {
+            display: inline-block;
+            background: linear-gradient(90deg, #25d366, #128c7e);
+            color: white;
+            padding: 1rem 3rem;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .cta-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(37, 211, 102, 0.6);
         }
     </style>
 </head>
 
 <body>
 
-    <div class="container">
-        <!-- Sidebar Navigation -->
-        <div class="sidebar">
-            <div class="glass-card status-card">
-                <h2>حالة النظام</h2>
-                <div id="status-indicator" class="status-indicator">جاري الاتصال...</div>
-                <div id="current-user" style="font-size: 0.8rem; color: #888; margin-top: 5px;"></div>
-                <div id="qr-container"></div>
+    <div class="hero-section">
+        <h1 class="hero-title">نظام إدارة واتس اب المدارس<br>الأكثر ذكاءً 🚀</h1>
+        <p class="hero-desc">
+            منصة متكاملة تتيح للمدارس إرسال الإشعارات، الدرجات، والحضور للطلاب وأولياء الأمور عبر واتس اب
+            بشكل آلي وموثوق.
+        </p>
+
+        <a href="/super" class="cta-btn">دخول الإدارة 👑</a>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🏫</div>
+                <h3>متعدد المدارس</h3>
+                <p>كل مدرسة لها لوحة تحكم خاصة ورابط مستقل لخصوصية تامة.</p>
             </div>
 
-            <div class="glass-card">
-                <div class="nav-link active" id="nav-dashboard" onclick="showView('dashboard')">🏠 الرئيسية</div>
-                <div class="nav-link" id="nav-send" onclick="showView('send')">📢 إرسال حملة</div>
-                <div class="nav-link" id="nav-campaigns" onclick="showView('campaigns')">📊 التقارير</div>
-                <div class="nav-link" id="nav-students" onclick="showView('students')">🎓 الطلاب</div>
-                <div class="nav-link" id="nav-users" onclick="showView('users')" style="display:none;">👥 المشرفين</div>
-                <div class="nav-link" id="nav-logs" onclick="showView('logs')" style="display:none;">📝 السجلات</div>
-                <div class="nav-link" id="nav-settings" onclick="showView('settings')" style="display:none;">⚙️ إعدادات
-                    الموقع</div>
-                <div class="nav-link" onclick="logout()" style="color: var(--danger);">🚪 خروج</div>
-            </div>
-        </div>
-
-        <!-- Main Content Area -->
-        <div class="main-content">
-
-            <!-- VIEW: Dashboard -->
-            <div id="view-dashboard" class="view-section active">
-                <div class="glass-card">
-                    <!-- Dynamic Header -->
-                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
-                        <img id="site-logo-display" src="" alt="شعار" style="height: 60px; display: none;">
-                        <h2 id="site-name-display">نظام واتس اب المدارس</h2>
-                    </div>
-
-                    <h2>السجل الحي</h2>
-                    <div id="log-container"></div>
-                </div>
+            <div class="feature-card">
+                <div class="feature-icon">📱</div>
+                <h3>واتس اب آلي</h3>
+                <p>ربط مباشر مع QR Code وإرسال رسائل لا محدودة بنقرة واحدة.</p>
             </div>
 
-            <!-- VIEW: Settings (Admin Only) -->
-            <div id="view-settings" class="view-section">
-                <div class="glass-card">
-                    <h2>إعدادات الموقع</h2>
-
-                    <div style="margin-bottom: 20px;">
-                        <label>اسم الموقع:</label>
-                        <input type="text" id="setting-site-name" placeholder="مثال: مدارس الأفق">
-                        <button onclick="saveSiteName()">حفظ الاسم</button>
-                    </div>
-
-                    <div style="margin-bottom: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
-                        <label>شعار الموقع:</label>
-                        <input type="file" id="setting-logo-file" accept="image/*">
-                        <button onclick="uploadLogo()">رفع الشعار 🖼️</button>
-                        <br><br>
-                        <img id="setting-logo-preview" src=""
-                            style="max-height: 100px; display: none; border: 1px solid #555; padding: 5px;">
-                    </div>
-                </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>تقارير ذكية</h3>
+                <p>تتبع حالة الرسائل (تم الإرسال، فشل) لحظياً مع سجل كامل.</p>
             </div>
-
-            <!-- VIEW: Send Campaign -->
-            <div id="view-send" class="view-section">
-                <div class="glass-card">
-                    <h2>بدء حملة جديدة</h2>
-                    <input type="text" id="campaign-name" placeholder="اسم الحملة (اختياري)">
-                    <textarea id="message-content" rows="4" placeholder="اكتب نص الرسالة هنا..."></textarea>
-
-                    <!-- Student Selection -->
-                    <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
-                        <div
-                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <h3 style="margin: 0;">اختر الطلاب:</h3>
-                            <div>
-                                <button onclick="selectAllStudents()"
-                                    style="padding: 5px 10px; font-size: 0.85rem; margin-left: 5px;">✅ تحديد
-                                    الكل</button>
-                                <button onclick="deselectAllStudents()"
-                                    style="padding: 5px 10px; font-size: 0.85rem; background: #666;">❌ إلغاء
-                                    التحديد</button>
-                            </div>
-                        </div>
-                        <div id="student-selector"
-                            style="max-height: 300px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; padding: 10px; background: rgba(0,0,0,0.2);">
-                            <!-- Checkboxes will be populated by JS -->
-                        </div>
-                    </div>
-
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
-                        <button onclick="startCampaign()">🚀 إرسال الحملة</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VIEW: Reports -->
-            <div id="view-campaigns" class="view-section">
-                <div class="glass-card">
-                    <h2>تقارير الحملات</h2>
-                    <div id="campaigns-list"></div>
-                </div>
-                <!-- Details Sub-view -->
-                <div id="campaign-details" class="glass-card" style="display:none; margin-top: 20px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3 id="campaign-title">التفاصيل</h3>
-                        <div>
-                            <button id="retry-btn" onclick="retryCampaign()"
-                                style="background: #ffa500; display:none;">🔄 إعادة إرسال للفاشلين</button>
-                            <button onclick="closeDetails()" style="padding: 5px 10px; background: #666;">رجوع للقائمة
-                                🔙</button>
-                        </div>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>المستلم</th>
-                                    <th>الحالة</th>
-                                    <th>الوقت</th>
-                                </tr>
-                            </thead>
-                            <tbody id="campaign-history-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VIEW: Students -->
-            <div id="view-students" class="view-section">
-                <div class="glass-card">
-                    <h2>إدارة الطلاب</h2>
-                    <div
-                        style="display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center; justify-content: space-between;">
-                        <div style="display: flex; gap: 10px;">
-                            <button onclick="openModal()" style="background: #007bff;">📂 استيراد Excel</button>
-                            <button onclick="downloadTemplate()" style="background: #17a2b8;">📥 تحميل نموذج
-                                Excel</button>
-                        </div>
-                        <input type="text" id="search-student" placeholder="بحث..." onkeyup="filterStudents()"
-                            style="margin:0; width: 200px;">
-                    </div>
-
-                    <!-- Manual Add (Admin Only visible via JS) -->
-                    <div id="manual-add-container"
-                        style="display:none; flex-direction: column; gap: 10px; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1);">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-size: 1rem; color: #eee; font-weight: bold;">إضافة طالب يدوي</span>
-                        </div>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <input type="text" id="manual-name" placeholder="الاسم" style="margin:0; flex: 1;">
-                            <input type="text" id="manual-phone" placeholder="9665xxxxxxxx"
-                                style="margin:0; flex: 1; direction: ltr;">
-                            <button onclick="addStudentManual()" style="background: #25d366; padding: 10px 20px;">إضافة
-                                +</button>
-                        </div>
-                    </div>
-
-                    <div class="table-container">
-                        <table id="students-table">
-                            <thead>
-                                <tr>
-                                    <th>الاسم</th>
-                                    <th>الجوال</th>
-                                    <th>إجراء</th>
-                                </tr>
-                            </thead>
-                            <tbody id="students-table-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VIEW: Users (Admin Only) -->
-            <div id="view-users" class="view-section">
-                <div class="glass-card">
-                    <h2>إدارة المشرفين</h2>
-                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
-                        <input type="text" id="new-username" placeholder="اسم المستخدم">
-                        <input type="password" id="new-password" placeholder="كلمة المرور">
-                        <select id="new-role">
-                            <option value="user">مستخدم عادي</option>
-                            <option value="admin">مشرف عام</option>
-                        </select>
-                        <button onclick="addUser()">إضافة</button>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>المستخدم</th>
-                                    <th>الصلاحية</th>
-                                    <th>إجراء</th>
-                                </tr>
-                            </thead>
-                            <tbody id="users-table-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VIEW: System Logs (Admin Only) -->
-            <div id="view-logs" class="view-section">
-                <div class="glass-card">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h2>سجلات النظام</h2>
-                        <div>
-                            <button onclick="downloadLogs()"
-                                style="padding: 5px 15px; font-size: 0.8rem; background: #6c757d; margin-left: 5px;">📥
-                                تحميل السجلات</button>
-                            <button onclick="fetchLogs()" style="padding: 5px 15px; font-size: 0.8rem;">تحديث
-                                🔄</button>
-                        </div>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>المستوى</th>
-                                    <th>الرسالة</th>
-                                    <th>الوقت</th>
-                                </tr>
-                            </thead>
-                            <tbody id="logs-table-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
         </div>
     </div>
 
-    <!-- Upload Modal -->
-    <div id="upload-modal" class="modal">
-        <div class="modal-content">
-            <h3>استيراد الطلاب (Excel)</h3>
-            <p style="font-size: 0.9rem; color: #ccc; margin-bottom: 1rem;">يجب أن يحتوي الملف على أعمدة "Name" و
-                "Phone".</p>
-            <input type="file" id="excel-file" accept=".xlsx, .xls">
-            <br><br>
-            <button onclick="uploadExcel()">رفع الملف 📤</button>
-            <button onclick="closeModal()" class="danger-btn">إلغاء ❌</button>
-        </div>
-    </div>
-
-    <script src="app.js"></script>
 </body>
 
 </html>

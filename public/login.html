@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تسجيل الدخول - واتس اب المدارس</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
 </head>
 
@@ -25,25 +25,53 @@
     <script>
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
             const errorMsg = document.getElementById('error-msg');
 
+            // Determine API Endpoint based on URL
+            const parts = window.location.pathname.split('/');
+            const slug = parts[1]; // /:slug/login
+
+            let apiUrl = '/api/login'; // Fallback
+            let redirectUrl = '/';
+
+            // Check if Super Admin Login
+            if (window.location.pathname.includes('/super/login')) {
+                apiUrl = '/super/api/login';
+                redirectUrl = '/super'; // Dashboard for super admin
+            } else if (slug && slug !== 'login.html' && slug !== 'super') {
+                apiUrl = `/${slug}/api/login`;
+                redirectUrl = `/${slug}`;
+            }
+
             try {
-                const res = await fetch('/api/login', {
+                const res = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username, password }),
+                    credentials: 'include' // Ensure cookies are sent/saved
                 });
 
                 const data = await res.json();
                 if (data.success) {
-                    window.location.href = '/';
+                    errorMsg.style.color = '#25d366';
+                    errorMsg.innerText = '✅ تم تسجيل الدخول بنجاح! جاري التحويل...';
+                    errorMsg.style.display = 'block';
+
+                    setTimeout(() => {
+                        if (data.redirect) {
+                            window.location.href = data.redirect;
+                        } else {
+                            window.location.href = redirectUrl;
+                        }
+                    }, 1000);
                 } else {
                     errorMsg.innerText = data.error || 'خطأ في بيانات الدخول';
                     errorMsg.style.display = 'block';
                 }
             } catch (err) {
+                console.error(err);
                 errorMsg.innerText = 'خطأ في الاتصال';
                 errorMsg.style.display = 'block';
             }

@@ -4,15 +4,53 @@ const socket = io();
 let currentUser = null;
 let currentCampaignId = null; // Track viewed campaign for retry
 let currentCampaignMessage = ''; // Track message for retry if needed
+let studentsData = []; // Global variable to store students for campaign selector
+
+// Helper to get API base path based on tenant slug
+function getApiBase() {
+    const parts = window.location.pathname.split('/');
+    // Format: /:slug or /:slug/login
+    // parts[0] is empty, parts[1] is slug
+    const slug = parts[1];
+    if (slug && slug !== 'super' && slug !== 'login.html') {
+        return `/${slug}/api`;
+    }
+    return '/api'; // Fallback
+}
+
+// Helper to determine login URL
+function getLoginUrl() {
+    const parts = window.location.pathname.split('/');
+    const slug = parts[1];
+    // If we have a valid slug that isn't a file or super
+    if (slug && !slug.includes('.') && slug !== 'super') {
+        return `/${slug}/login`;
+    }
+    return '/login.html';
+}
 
 // Auth Check
 async function checkAuth() {
     try {
-        const res = await fetch('/api/me');
-        if (res.status === 401) return window.location.href = '/login.html';
+        const res = await fetch(`${getApiBase()}/me`);
+        if (res.status === 401) return window.location.href = getLoginUrl();
         currentUser = await res.json();
 
         document.getElementById('current-user').innerText = `${currentUser.username} (${currentUser.role})`;
+
+        // Show Days Left
+        const daysEl = document.getElementById('subscription-days');
+        if (daysEl && currentUser.daysLeft !== undefined) {
+            daysEl.innerText = `${currentUser.daysLeft} يوم`;
+            if (currentUser.daysLeft < 5) daysEl.style.color = '#ff5f5f';
+            else daysEl.style.color = '#25d366';
+        }
+
+        // Join Socket Room
+        if (currentUser.id) {
+            socket.emit('join', currentUser.id);
+        }
+
         if (currentUser.role === 'admin') {
             document.getElementById('nav-users').style.display = 'block';
             document.getElementById('nav-logs').style.display = 'block';
@@ -28,14 +66,14 @@ async function checkAuth() {
         if (currentUser.role === 'admin') fetchUsers();
 
     } catch (err) {
-        window.location.href = '/login.html';
+        window.location.href = getLoginUrl();
     }
 }
 checkAuth();
 
 async function logout() {
-    await fetch('/api/logout', { method: 'POST' });
-    window.location.href = '/login.html';
+    await fetch(`${getApiBase()}/logout`, { method: 'POST' });
+    window.location.href = getLoginUrl();
 }
 
 // Navigation
@@ -67,8 +105,6 @@ socket.on('campaign_progress', (data) => {
     updateCampaignRow(data.id, data.type);
 
     // If viewing this campaign, refresh details too (this might still cause minor refresh issues but details view is different)
-    // Actually details view is a table list, appending is better but refreshing is likely OK as user is not clicking ON the list usually, just viewing.
-    // But if sending is fast, it flickers. Ideally append row.
     if (currentCampaignId && currentCampaignId == data.id) {
         viewCampaignDetails(currentCampaignId);
     }
@@ -77,10 +113,8 @@ socket.on('campaign_progress', (data) => {
 // --- Logic ---
 
 // Students
-let studentsData = []; // Global variable to store students for campaign selector
-
 async function fetchStudents() {
-    const res = await fetch('/api/students');
+    const res = await fetch(`${getApiBase()}/students`);
     const students = await res.json();
     studentsData = students; // Store globally
     const tbody = document.getElementById('students-table-body');
@@ -95,7 +129,7 @@ async function fetchStudents() {
 
 async function deleteStudent(id) {
     if (!confirm('هل أنت متأكد من الحذف؟')) return;
-    await fetch(`/api/students/${id}`, { method: 'DELETE' });
+    await fetch(`${getApiBase()}/students/${id}`, { method: 'DELETE' });
     fetchStudents();
 }
 
@@ -120,11 +154,11 @@ async function uploadExcel() {
     formData.append('file', file);
 
     try {
-        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const res = await fetch(`${getApiBase()}/upload`, { method: 'POST', body: formData });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
 
-        alert(`تم الرفع! تمت الاضافة: ${data.added}, مكرر/أخطاء: ${data.errors}`);
+        alert(`تم الرفع! تمت الاضافة: ${data.added}, مكرر / أخطاء: ${data.skipped || data.errors || 0}`);
         closeModal();
         fetchStudents();
     } catch (err) {
@@ -133,7 +167,7 @@ async function uploadExcel() {
 }
 
 function downloadTemplate() {
-    window.location.href = '/api/template';
+    window.location.href = `${getApiBase()}/template`;
 }
 
 async function addStudentManual() {
@@ -143,7 +177,7 @@ async function addStudentManual() {
     if (!name || !phone) return alert('الرجاء ادخال الاسم ورقم الجوال');
 
     try {
-        const res = await fetch('/api/students', {
+        const res = await fetch(`${getApiBase()}/students`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, phone })
@@ -201,7 +235,7 @@ async function startCampaign() {
     if (!confirm('هل تريد بدء إرسال الحملة؟')) return;
 
     try {
-        const res = await fetch('/api/campaign', {
+        const res = await fetch(`${getApiBase()}/campaign`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, message, studentIds: selectedIds })
@@ -219,14 +253,9 @@ async function startCampaign() {
 }
 
 async function fetchCampaigns() {
-    const res = await fetch('/api/campaigns');
+    const res = await fetch(`${getApiBase()}/campaigns`);
     const campaigns = await res.json();
     const listContainer = document.getElementById('campaigns-list');
-
-    // Only rebuild if empty or count mismatch (simple approach) or diffing?
-    // simplest: clear and rebuild IS OKAY only if we are NOT doing it on every progress event.
-    // The issue was calling this function on every progress event.
-    // So we will keep this valid for initial load, but we will add IDs.
 
     listContainer.innerHTML = campaigns.map(c => `
         <div id="camp-row-${c.id}" class="glass-card" style="margin-bottom: 10px; padding: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="viewCampaignDetails(${c.id}, '${c.name ? c.name.replace(/'/g, "\\'") : 'بدون اسم'}')">
@@ -272,7 +301,7 @@ async function viewCampaignDetails(id, name = null) {
     if (name) document.getElementById('campaign-title').innerText = `التفاصيل: ${name}`;
     currentCampaignId = id;
 
-    const res = await fetch(`/api/campaigns/${id}`);
+    const res = await fetch(`${getApiBase()}/campaigns/${id}`);
     const history = await res.json();
 
     if (!Array.isArray(history)) {
@@ -322,7 +351,7 @@ async function retryCampaign() {
     if (!confirm('هل تريد إعادة محاولة إرسال الرسائل التي فشلت فقط؟')) return;
 
     try {
-        const res = await fetch(`/api/campaign/${currentCampaignId}/retry`, {
+        const res = await fetch(`${getApiBase()}/campaign/${currentCampaignId}/retry`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ message: currentCampaignMessage })
@@ -344,7 +373,7 @@ function closeDetails() {
 
 // Users (Admin)
 async function fetchUsers() {
-    const res = await fetch('/api/users');
+    const res = await fetch(`${getApiBase()}/users`);
     const users = await res.json();
     document.getElementById('users-table-body').innerHTML = users.map(u => `
         <tr>
@@ -362,7 +391,7 @@ async function addUser() {
 
     if (!username || !password) return alert('أكمل البيانات');
 
-    const res = await fetch('/api/users', {
+    const res = await fetch(`${getApiBase()}/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password, role })
@@ -379,17 +408,17 @@ async function addUser() {
 
 async function deleteUser(id) {
     if (!confirm('حذف المستخدم؟')) return;
-    await fetch(`/api/users/${id}`, { method: 'DELETE' });
+    await fetch(`${getApiBase()}/users/${id}`, { method: 'DELETE' });
     fetchUsers();
 }
 
 // System Logs
 function downloadLogs() {
-    window.location.href = '/api/logs/download';
+    window.location.href = `${getApiBase()}/logs/download`;
 }
 
 async function fetchLogs() {
-    const res = await fetch('/api/logs');
+    const res = await fetch(`${getApiBase()}/logs`);
     if (res.status === 403) return alert('غير مصرح لك');
 
     const logs = await res.json();
@@ -411,7 +440,7 @@ async function fetchLogs() {
 // Settings
 async function loadSettings() {
     try {
-        const res = await fetch('/api/settings');
+        const res = await fetch(`${getApiBase()}/settings`);
         const settings = await res.json();
 
         if (settings.site_name) {
@@ -444,7 +473,7 @@ async function saveSiteName() {
     const siteName = document.getElementById('setting-site-name').value;
     if (!siteName) return alert('اكتب الاسم');
 
-    await fetch('/api/settings', {
+    await fetch(`${getApiBase()}/settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ siteName })
@@ -462,7 +491,7 @@ async function uploadLogo() {
     formData.append('file', file);
 
     try {
-        const res = await fetch('/api/settings/logo', { method: 'POST', body: formData });
+        const res = await fetch(`${getApiBase()}/settings/logo`, { method: 'POST', body: formData });
         const data = await res.json();
 
         if (data.success) {
@@ -497,3 +526,5 @@ function addLog(msg) {
     div.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
     document.getElementById('log-container').prepend(div);
 }
+
+

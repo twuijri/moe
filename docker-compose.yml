@@ -6,7 +6,7 @@ services:
     container_name: whatsapp_saas_app
     restart: unless-stopped
     ports:
-      - "3000"
+      - "8080:3000"
     volumes:
       - ./src:/usr/src/app/src
       - ./public:/usr/src/app/public
