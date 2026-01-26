@@ -275,7 +275,8 @@ tenantRouter.post('/users', requireAdmin, (req, res) => {
 
 // Students
 tenantRouter.get('/students', (req, res) => {
-    res.json(db.getAllStudents(req.tenantId));
+    const students = db.getAllStudents(req.tenantId);
+    res.json(students);
 });
 
 tenantRouter.post('/students', requireAdmin, (req, res) => {
