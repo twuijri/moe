@@ -69,6 +69,22 @@ async function checkAuth() {
         window.location.href = getLoginUrl();
     }
 }
+
+async function logoutWhatsApp() {
+    if (!confirm('هل تريد إعادة ضبط اتصال WhatsApp؟ سيتم فصل الجلسة الحالية وستحتاج للربط من جديد.')) return;
+
+    try {
+        const res = await fetch(`${getApiBase()}/whatsapp/logout`, { method: 'POST' });
+        const data = await res.json();
+
+        if (data.error) throw new Error(data.error);
+
+        alert('تم إعادة الضبط! الرجاء الانتظار...');
+        setTimeout(() => window.location.reload(), 2000);
+    } catch (err) {
+        alert(err.message);
+    }
+}
 checkAuth();
 
 async function logout() {

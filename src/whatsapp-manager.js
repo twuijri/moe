@@ -180,11 +180,16 @@ class WhatsAppManager {
             this.clients.delete(tenantId);
             this.status.delete(tenantId);
             // Optionally delete auth folder
-            const authPath = path.join(__dirname, '../.wwebjs_auth', `tenant_${tenantId}`);
+            const authPath = path.join(__dirname, '../.wwebjs_auth', `session-tenant_${tenantId}`);
             if (fs.existsSync(authPath)) {
-                fs.rmdirSync(authPath, { recursive: true });
+                fs.rmSync(authPath, { recursive: true, force: true });
             }
         }
+    }
+
+    // Alias for consistency
+    async logoutClient(tenantId) {
+        return this.logout(tenantId);
     }
 }
 

@@ -285,6 +285,18 @@ tenantRouter.delete('/users/:id', requireAdmin, (req, res) => {
     }
 });
 
+// WhatsApp Logout/Reset
+tenantRouter.post('/whatsapp/logout', requireAdmin, async (req, res) => {
+    try {
+        await whatsappManager.logoutClient(req.tenantId);
+        logToDb(req.tenantId, 'info', 'WhatsApp session reset by admin');
+        res.json({ success: true, message: 'تم إعادة ضبط اتصال WhatsApp' });
+    } catch (err) {
+        console.error('Error logging out WhatsApp:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Students
 tenantRouter.get('/students', (req, res) => {
     const students = db.getAllStudents(req.tenantId);
