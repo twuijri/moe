@@ -484,8 +484,16 @@ tenantRouter.post('/campaign', (req, res) => {
         for (let i = 0; i < targets.length; i++) {
             const student = targets[i];
 
+            // Personalize message with student data
+            let personalizedMessage = message
+                .replace(/\$name/g, student.name || '')
+                .replace(/\$phone/g, student.phone_number || '')
+                .replace(/\$class/g, student.class_number || '')
+                .replace(/\$grade/g, student.grade_number || '')
+                .replace(/\$student_id/g, student.student_id || '');
+
             try {
-                await whatsappManager.send(req.tenantId, student.phone_number, message, campaignId);
+                await whatsappManager.send(req.tenantId, student.phone_number, personalizedMessage, campaignId);
                 console.log(`✅ Sent ${i + 1}/${targets.length} to ${student.phone_number}`);
             } catch (err) {
                 console.error(`❌ Failed to send to ${student.phone_number}:`, err.message);
