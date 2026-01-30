@@ -29,14 +29,13 @@ function getLoginUrl() {
     return '/login.html';
 }
 
-// Auth Check
+// --- Auth & Init ---
 async function checkAuth() {
     try {
         const res = await fetch(`${getApiBase()}/me`);
-        if (res.status === 401) return window.location.href = getLoginUrl();
-        currentUser = await res.json();
-
-        document.getElementById('current-user').innerText = `${currentUser.username} (${currentUser.role})`;
+        if (!res.ok) throw new Error('Not authenticated');
+        const data = await res.json();
+        currentUser = data;
 
         // Show Days Left
         const daysEl = document.getElementById('subscription-days');
@@ -44,11 +43,6 @@ async function checkAuth() {
             daysEl.innerText = `${currentUser.daysLeft} يوم`;
             if (currentUser.daysLeft < 5) daysEl.style.color = '#ff5f5f';
             else daysEl.style.color = '#25d366';
-        }
-
-        // Join Socket Room
-        if (currentUser.id) {
-            socket.emit('join', currentUser.id);
         }
 
         if (currentUser.role === 'admin') {
@@ -59,6 +53,10 @@ async function checkAuth() {
             if (manualAdd) manualAdd.style.display = 'flex';
         }
 
+        // Show current user
+        const userEl = document.getElementById('current-user');
+        if (userEl) userEl.innerText = `مستخدم: ${currentUser.username} (${currentUser.role})`;
+
         // Load initial data
         loadSettings(); // Load branding first
         fetchStudents();
@@ -66,9 +64,28 @@ async function checkAuth() {
         if (currentUser.role === 'admin') fetchUsers();
 
     } catch (err) {
+        console.error('Auth check failed:', err);
         window.location.href = getLoginUrl();
     }
 }
+
+// Join Socket Room IMMEDIATELY on connection
+socket.on('connect', () => {
+    console.log('Socket connected, attempting to join room...');
+    // Get tenant from URL
+    const pathParts = window.location.pathname.split('/');
+    const tenantSlug = pathParts[1];
+
+    // Join with tenant ID (we'll get it from checkAuth, but try early join)
+    fetch(`${getApiBase()}/me`)
+        .then(res => res.json())
+        .then(data => {
+            console.log(`Joining room for tenant ${data.id}`);
+            socket.emit('join', data.id);
+        })
+        .catch(err => console.error('Failed to join room:', err));
+});
+
 
 async function logoutWhatsApp() {
     if (!confirm('هل تريد إعادة ضبط اتصال WhatsApp؟ سيتم فصل الجلسة الحالية وستحتاج للربط من جديد.')) return;
