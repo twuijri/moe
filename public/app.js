@@ -113,7 +113,10 @@ socket.on('qr', (url) => {
     document.getElementById('qr-container').innerHTML = `<img src="${url}" alt="Scan QR" width="150">`;
     updateStatus({ ready: false, qr: url });
 });
-socket.on('ready', () => updateStatus({ ready: true }));
+socket.on('ready', () => {
+    console.log('✅ WhatsApp ready event received!');
+    updateStatus({ ready: true });
+});
 socket.on('log', addLog);
 socket.on('campaign_progress', (data) => {
     // OLD: fetchCampaigns(); // causing DOM thrashing

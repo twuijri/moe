@@ -512,9 +512,16 @@ io.on('connection', (socket) => {
 
             // Send immediate status if available
             const status = whatsappManager.getStatus(tenantId);
+            console.log(`Current status for tenant ${tenantId}:`, status);
             socket.emit('status_update', status);
-            if (status.qr) socket.emit('qr', status.qr);
-            if (status.ready) socket.emit('ready');
+            if (status.qr) {
+                console.log(`Sending QR to tenant ${tenantId}`);
+                socket.emit('qr', status.qr);
+            }
+            if (status.ready) {
+                console.log(`Sending ready event to tenant ${tenantId}`);
+                socket.emit('ready');
+            }
         }
     });
 
