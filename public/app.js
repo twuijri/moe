@@ -538,187 +538,190 @@ async function viewCampaignDetails(id, name = null) {
             <td>${new Date(h.timestamp).toLocaleTimeString('ar-SA')}</td>
         </tr>
     `).join('');
+    } catch (err) {
+        console.error('Error loading campaign details:', err);
+        alert('Error loading details: ' + err.message);
     }
-
+}
 async function retryCampaign() {
-        if (!currentCampaignId) return;
-        if (!confirm('هل تريد إعادة محاولة إرسال الرسائل التي فشلت فقط؟')) return;
+    if (!currentCampaignId) return;
+    if (!confirm('هل تريد إعادة محاولة إرسال الرسائل التي فشلت فقط؟')) return;
 
-        try {
-            const res = await fetch(`${getApiBase()}/campaign/${currentCampaignId}/retry`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: currentCampaignMessage })
-            });
-            const data = await res.json();
-            if (data.error) throw new Error(data.error);
+    try {
+        const res = await fetch(`${getApiBase()}/campaign/${currentCampaignId}/retry`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: currentCampaignMessage })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
 
-            alert(`جاري إعادة المحاولة لـ ${data.count} رقم.`);
-        } catch (err) {
-            alert(err.message);
-        }
+        alert(`جاري إعادة المحاولة لـ ${data.count} رقم.`);
+    } catch (err) {
+        alert(err.message);
     }
+}
 
-    function closeDetails() {
-        document.getElementById('campaign-details').style.display = 'none';
-        document.getElementById('campaigns-list').style.display = 'block'; // Show list again
-        currentCampaignId = null;
-    }
+function closeDetails() {
+    document.getElementById('campaign-details').style.display = 'none';
+    document.getElementById('campaigns-list').style.display = 'block'; // Show list again
+    currentCampaignId = null;
+}
 
-    // Users (Admin)
-    async function fetchUsers() {
-        const res = await fetch(`${getApiBase()}/users`);
-        const users = await res.json();
-        document.getElementById('users-table-body').innerHTML = users.map(u => `
+// Users (Admin)
+async function fetchUsers() {
+    const res = await fetch(`${getApiBase()}/users`);
+    const users = await res.json();
+    document.getElementById('users-table-body').innerHTML = users.map(u => `
         <tr>
             <td>${u.username}</td>
             <td>${u.role}</td>
             <td>${u.username !== 'admin' ? `<button class="danger-btn" onclick="deleteUser(${u.id})">حذف</button>` : ''}</td>
         </tr>
     `).join('');
-    }
+}
 
-    async function addUser() {
-        const username = document.getElementById('new-username').value;
-        const password = document.getElementById('new-password').value;
-        const role = document.getElementById('new-role').value;
+async function addUser() {
+    const username = document.getElementById('new-username').value;
+    const password = document.getElementById('new-password').value;
+    const role = document.getElementById('new-role').value;
 
-        if (!username || !password) return alert('أكمل البيانات');
+    if (!username || !password) return alert('أكمل البيانات');
 
-        const res = await fetch(`${getApiBase()}/users`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password, role })
-        });
-        const data = await res.json();
-        if (data.success) {
-            document.getElementById('new-username').value = '';
-            document.getElementById('new-password').value = '';
-            fetchUsers();
-        } else {
-            alert(data.error);
-        }
-    }
-
-    async function deleteUser(id) {
-        if (!confirm('حذف المستخدم؟')) return;
-        await fetch(`${getApiBase()}/users/${id}`, { method: 'DELETE' });
+    const res = await fetch(`${getApiBase()}/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, role })
+    });
+    const data = await res.json();
+    if (data.success) {
+        document.getElementById('new-username').value = '';
+        document.getElementById('new-password').value = '';
         fetchUsers();
+    } else {
+        alert(data.error);
     }
+}
 
-    // System Logs
-    function downloadLogs() {
-        window.location.href = `${getApiBase()}/logs/download`;
-    }
+async function deleteUser(id) {
+    if (!confirm('حذف المستخدم؟')) return;
+    await fetch(`${getApiBase()}/users/${id}`, { method: 'DELETE' });
+    fetchUsers();
+}
 
-    async function fetchLogs() {
-        const res = await fetch(`${getApiBase()}/logs`);
-        if (res.status === 403) return alert('غير مصرح لك');
+// System Logs
+function downloadLogs() {
+    window.location.href = `${getApiBase()}/logs/download`;
+}
 
-        const logs = await res.json();
-        document.getElementById('logs-table-body').innerHTML = logs.map(log => {
-            let color = 'white';
-            if (log.level === 'ERROR') color = '#ff5f5f';
-            if (log.level === 'WARN') color = '#ffa500';
+async function fetchLogs() {
+    const res = await fetch(`${getApiBase()}/logs`);
+    if (res.status === 403) return alert('غير مصرح لك');
 
-            return `
+    const logs = await res.json();
+    document.getElementById('logs-table-body').innerHTML = logs.map(log => {
+        let color = 'white';
+        if (log.level === 'ERROR') color = '#ff5f5f';
+        if (log.level === 'WARN') color = '#ffa500';
+
+        return `
             <tr>
                 <td style="color: ${color}; font-weight: bold;">${log.level}</td>
                 <td style="direction: ltr; text-align: left;">${log.message}</td>
                 <td>${new Date(log.timestamp).toLocaleString('ar-SA')}</td>
             </tr>
         `;
-        }).join('');
-    }
+    }).join('');
+}
 
-    // Settings
-    async function loadSettings() {
-        try {
-            const res = await fetch(`${getApiBase()}/settings`);
-            const settings = await res.json();
+// Settings
+async function loadSettings() {
+    try {
+        const res = await fetch(`${getApiBase()}/settings`);
+        const settings = await res.json();
 
-            if (settings.site_name) {
-                document.title = settings.site_name;
-                const header = document.getElementById('site-name-display');
-                if (header) header.innerText = settings.site_name;
-                const input = document.getElementById('setting-site-name');
-                if (input) input.value = settings.site_name;
-            }
-
-            if (settings.site_logo) {
-                const logoUrl = settings.site_logo + '?t=' + new Date().getTime(); // Cache bust
-                const display = document.getElementById('site-logo-display');
-                if (display) {
-                    display.src = logoUrl;
-                    display.style.display = 'block';
-                }
-                const preview = document.getElementById('setting-logo-preview');
-                if (preview) {
-                    preview.src = logoUrl;
-                    preview.style.display = 'block';
-                }
-            }
-        } catch (err) {
-            console.error('Failed to load settings', err);
+        if (settings.site_name) {
+            document.title = settings.site_name;
+            const header = document.getElementById('site-name-display');
+            if (header) header.innerText = settings.site_name;
+            const input = document.getElementById('setting-site-name');
+            if (input) input.value = settings.site_name;
         }
-    }
 
-    async function saveSiteName() {
-        const siteName = document.getElementById('setting-site-name').value;
-        if (!siteName) return alert('اكتب الاسم');
-
-        await fetch(`${getApiBase()}/settings`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ siteName })
-        });
-        alert('تم حفظ الاسم ✅');
-        loadSettings();
-    }
-
-    async function uploadLogo() {
-        const fileInput = document.getElementById('setting-logo-file');
-        const file = fileInput.files[0];
-        if (!file) return alert('الرجاء اختيار صورة الشعار');
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        try {
-            const res = await fetch(`${getApiBase()}/settings/logo`, { method: 'POST', body: formData });
-            const data = await res.json();
-
-            if (data.success) {
-                alert('تم رفع الشعار بنجاح ✅');
-                loadSettings();
-            } else {
-                alert('فشل الرفع');
+        if (settings.site_logo) {
+            const logoUrl = settings.site_logo + '?t=' + new Date().getTime(); // Cache bust
+            const display = document.getElementById('site-logo-display');
+            if (display) {
+                display.src = logoUrl;
+                display.style.display = 'block';
             }
-        } catch (err) {
-            alert(err.message);
+            const preview = document.getElementById('setting-logo-preview');
+            if (preview) {
+                preview.src = logoUrl;
+                preview.style.display = 'block';
+            }
         }
+    } catch (err) {
+        console.error('Failed to load settings', err);
     }
+}
 
-    // Helpers
-    function updateStatus(status) {
-        const el = document.getElementById('status-indicator');
-        if (status.ready) {
-            el.innerText = "متصل وجاهز ✅";
-            el.classList.add('ready');
-            el.style.color = '#25d366';
-            document.getElementById('qr-container').innerHTML = '';
+async function saveSiteName() {
+    const siteName = document.getElementById('setting-site-name').value;
+    if (!siteName) return alert('اكتب الاسم');
+
+    await fetch(`${getApiBase()}/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteName })
+    });
+    alert('تم حفظ الاسم ✅');
+    loadSettings();
+}
+
+async function uploadLogo() {
+    const fileInput = document.getElementById('setting-logo-file');
+    const file = fileInput.files[0];
+    if (!file) return alert('الرجاء اختيار صورة الشعار');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const res = await fetch(`${getApiBase()}/settings/logo`, { method: 'POST', body: formData });
+        const data = await res.json();
+
+        if (data.success) {
+            alert('تم رفع الشعار بنجاح ✅');
+            loadSettings();
         } else {
-            el.innerText = status.qr ? "امسح الباركود" : "جاري الاتصال...";
-            el.classList.remove('ready');
-            el.style.color = 'white';
+            alert('فشل الرفع');
         }
+    } catch (err) {
+        alert(err.message);
     }
+}
 
-    function addLog(msg) {
-        const div = document.createElement('div');
-        div.innerText = `[${new Date().toLocaleTimeString('ar-SA')}] ${msg}`;
-        div.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
-        document.getElementById('log-container').prepend(div);
+// Helpers
+function updateStatus(status) {
+    const el = document.getElementById('status-indicator');
+    if (status.ready) {
+        el.innerText = "متصل وجاهز ✅";
+        el.classList.add('ready');
+        el.style.color = '#25d366';
+        document.getElementById('qr-container').innerHTML = '';
+    } else {
+        el.innerText = status.qr ? "امسح الباركود" : "جاري الاتصال...";
+        el.classList.remove('ready');
+        el.style.color = 'white';
     }
+}
+
+function addLog(msg) {
+    const div = document.createElement('div');
+    div.innerText = `[${new Date().toLocaleTimeString('ar-SA')}] ${msg}`;
+    div.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+    document.getElementById('log-container').prepend(div);
+}
 
 
