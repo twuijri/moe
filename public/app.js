@@ -96,8 +96,12 @@ async function logoutWhatsApp() {
 
         if (data.error) throw new Error(data.error);
 
-        alert('تم إعادة الضبط! الرجاء الانتظار...');
-        setTimeout(() => window.location.reload(), 2000);
+        // Clear QR and show waiting message
+        document.getElementById('qr-container').innerHTML = '<p style="color: #999;">جاري إعادة التهيئة...</p>';
+        updateStatus({ ready: false, qr: null });
+
+        alert('تم إعادة الضبط! انتظر ظهور QR Code الجديد...');
+        // Don't reload - let the new QR come through socket
     } catch (err) {
         alert(err.message);
     }
