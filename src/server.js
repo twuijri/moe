@@ -484,9 +484,14 @@ tenantRouter.post('/campaign', (req, res) => {
         for (let i = 0; i < targets.length; i++) {
             const student = targets[i];
 
+            // Split name into first name and full name
+            const fullName = student.name || '';
+            const firstName = fullName.split(' ')[0] || '';
+
             // Personalize message with student data
             let personalizedMessage = message
-                .replace(/\$name/g, student.name || '')
+                .replace(/\$full_name/g, fullName)
+                .replace(/\$name/g, firstName)
                 .replace(/\$phone/g, student.phone_number || '')
                 .replace(/\$class/g, student.class_number || '')
                 .replace(/\$grade/g, student.grade_number || '')
