@@ -104,7 +104,16 @@ class WhatsAppManager {
 
         client.on('authenticated', () => {
             console.log(`Authenticated for Tenant ${tenantId}`);
-            if (this.io) this.io.to(`tenant_${tenantId}`).emit('log', 'WhatsApp Authenticated');
+            // Update status optimistically
+            this.status.set(tenantId, { ready: true, qr: null });
+            if (this.io) {
+                console.log(`Emitting ready after authentication for Tenant ${tenantId}`);
+                this.io.to(`tenant_${tenantId}`).emit('ready');
+                this.io.to(`tenant_${tenantId}`).emit('status_update', { ready: true });
+                this.io.to(`tenant_${tenantId}`).emit('log', 'WhatsApp Authenticated');
+                // Broadcast to all
+                this.io.emit('ready');
+            }
         });
 
         client.on('disconnected', (reason) => {
