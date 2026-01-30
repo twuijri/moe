@@ -476,12 +476,33 @@ tenantRouter.post('/campaign', (req, res) => {
 
     console.log(`Starting campaign ${campaignId} for Tenant ${req.tenantId}`);
 
-    // Send via WhatsApp Manager
-    targets.forEach(student => {
-        whatsappManager.send(req.tenantId, student.phone_number, message, campaignId);
-    });
-
+    // Send response immediately
     res.json({ success: true, count: targets.length });
+
+    // Send messages sequentially with random delays (async)
+    (async () => {
+        for (let i = 0; i < targets.length; i++) {
+            const student = targets[i];
+
+            try {
+                await whatsappManager.send(req.tenantId, student.phone_number, message, campaignId);
+                console.log(`✅ Sent ${i + 1}/${targets.length} to ${student.phone_number}`);
+            } catch (err) {
+                console.error(`❌ Failed to send to ${student.phone_number}:`, err.message);
+            }
+
+            // Random delay between 5-15 seconds (except after last message)
+            if (i < targets.length - 1) {
+                const delay = Math.floor(Math.random() * 10000) + 5000; // 5-15 seconds
+                console.log(`⏳ Waiting ${(delay / 1000).toFixed(1)}s before next message...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+
+        // Mark campaign as completed
+        db.updateCampaignStatus(req.tenantId, campaignId, 'completed');
+        console.log(`✅ Campaign ${campaignId} completed!`);
+    })();
 });
 
 // WhatsApp Status (Tenant Specific)
