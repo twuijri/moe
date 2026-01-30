@@ -122,6 +122,9 @@ async function fetchStudents() {
         <tr>
             <td>${s.name}</td>
             <td>${s.phone_number}</td>
+            <td>${s.class_number || '-'}</td>
+            <td>${s.grade_number || '-'}</td>
+            <td>${s.student_id || '-'}</td>
             <td>${currentUser.role === 'admin' ? `<button class="danger-btn" onclick="deleteStudent(${s.id})">حذف</button>` : '-'}</td>
         </tr>
     `).join('');
@@ -202,12 +205,65 @@ function loadStudentSelector() {
         return;
     }
 
-    selector.innerHTML = studentsData.map(student => `
-        <label style="display: block; padding: 8px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05);">
+    // Populate class filter dropdown
+    const classFilter = document.getElementById('class-filter');
+    const classes = [...new Set(studentsData.map(s => s.class_number).filter(c => c !== null))];
+    classes.sort((a, b) => a - b);
+
+    classFilter.innerHTML = '<option value="all">جميع الفصول</option>' +
+        classes.map(c => `<option value="${c}">الفصل ${c}</option>`).join('');
+
+    // Populate grade filter dropdown
+    const gradeFilter = document.getElementById('grade-filter');
+    const grades = [...new Set(studentsData.map(s => s.grade_number).filter(g => g !== null))];
+    grades.sort();
+
+    gradeFilter.innerHTML = '<option value="all">جميع الصفوف</option>' +
+        grades.map(g => `<option value="${g}">صف ${g}</option>`).join('');
+
+    renderStudentCheckboxes();
+}
+
+function renderStudentCheckboxes() {
+    const selector = document.getElementById('student-selector');
+    const classFilter = document.getElementById('class-filter');
+    const gradeFilter = document.getElementById('grade-filter');
+    const selectedClass = classFilter ? classFilter.value : 'all';
+    const selectedGrade = gradeFilter ? gradeFilter.value : 'all';
+
+    let filteredStudents = studentsData;
+
+    // Apply class filter
+    if (selectedClass !== 'all') {
+        filteredStudents = filteredStudents.filter(s => s.class_number == selectedClass);
+    }
+
+    // Apply grade filter
+    if (selectedGrade !== 'all') {
+        filteredStudents = filteredStudents.filter(s => s.grade_number == selectedGrade);
+    }
+
+    if (filteredStudents.length === 0) {
+        selector.innerHTML = '<p style="color: #999; text-align: center; padding: 10px;">لا توجد نتائج للفلتر المحدد</p>';
+        return;
+    }
+
+    selector.innerHTML = filteredStudents.map(student => {
+        const classInfo = student.class_number ? `فصل ${student.class_number}` : '';
+        const gradeInfo = student.grade_number ? `صف ${student.grade_number}` : '';
+        const info = [classInfo, gradeInfo].filter(x => x).join(' - ');
+
+        return `
+        <label style="display: block; padding: 8px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05);" class="student-label">
             <input type="checkbox" class="student-checkbox" value="${student.id}" checked style="margin-left: 8px;">
-            ${student.name} (${student.phone_number})
+            ${student.name} ${info ? `(${info})` : ''} - ${student.phone_number}
         </label>
-    `).join('');
+    `;
+    }).join('');
+}
+
+function filterStudentsByFilters() {
+    renderStudentCheckboxes();
 }
 
 function selectAllStudents() {

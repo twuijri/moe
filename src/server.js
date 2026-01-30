@@ -320,16 +320,42 @@ tenantRouter.post('/upload', requireAdmin, upload.single('file'), (req, res) => 
     try {
         const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const data = xlsx.utils.sheet_to_json(sheet);
+        const data = xlsx.utils.sheet_to_json(sheet, { header: 1 }); // Read as array of arrays
+
         const studentsToAdd = [];
-        data.forEach(row => {
-            const name = row['Name'] || row['name'] || row['Student'] || row['اسم'] || 'Unknown';
-            let phone = row['Phone'] || row['phone'] || row['Mobile'] || row['number'] || row['رقم'];
-            if (phone) {
-                phone = String(phone).replace(/\D/g, '');
-                studentsToAdd.push({ name, phone });
+
+        // Skip first 4 rows (empty rows, title, and header)
+        // Row 0-2: Empty/Title rows
+        // Row 3: Headers (الجوال، الفصل، رقم الصف، اسم الطالب، رقم الطالب)
+        // Row 4+: Actual student data
+        for (let i = 4; i < data.length; i++) {
+            const row = data[i];
+            if (!row || row.length === 0) continue;
+
+            // Column mapping based on the Excel file structure:
+            // Column 0: الجوال (Phone)
+            // Column 1: الفصل (Class)
+            // Column 2: رقم الصف (Grade/Classroom Number)
+            // Column 3: اسم الطالب (Student Name)
+            // Column 4: رقم الطالب (Student ID / National ID)
+
+            const phone = row[0] ? String(row[0]).replace(/\D/g, '') : null;
+            const classNumber = row[1] ? parseInt(row[1]) : null;
+            const gradeNumber = row[2] ? String(row[2]) : null;
+            const name = row[3] || 'Unknown';
+            const studentId = row[4] ? String(row[4]) : null;
+
+            if (phone && phone.length >= 9) {
+                studentsToAdd.push({
+                    name,
+                    phone,
+                    classNumber,
+                    studentId,
+                    gradeNumber
+                });
             }
-        });
+        }
+
         const result = db.addStudentsBulk(req.tenantId, studentsToAdd);
         res.json({ success: true, ...result });
     } catch (err) {

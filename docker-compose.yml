@@ -2,19 +2,28 @@ version: '3.8'
 
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: whatsapp_saas_app
     restart: unless-stopped
     ports:
       - "8080:3000"
     volumes:
-      - ./src:/usr/src/app/src
-      - ./public:/usr/src/app/public
       - whatsapp_session:/usr/src/app/.wwebjs_auth
       - whatsapp_data:/usr/src/app/data
     environment:
       - NODE_ENV=production
+      - PORT=3000
+    networks:
+      - whatsapp_network
+
+networks:
+  whatsapp_network:
+    driver: bridge
 
 volumes:
   whatsapp_session:
+    driver: local
   whatsapp_data:
+    driver: local

@@ -141,7 +141,15 @@
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                             <h3 style="margin: 0;">اختر الطلاب:</h3>
-                            <div>
+                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                                <select id="grade-filter" onchange="filterStudentsByFilters()"
+                                    style="padding: 5px 10px; font-size: 0.85rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 5px;">
+                                    <option value="all">جميع الصفوف</option>
+                                </select>
+                                <select id="class-filter" onchange="filterStudentsByFilters()"
+                                    style="padding: 5px 10px; font-size: 0.85rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 5px;">
+                                    <option value="all">جميع الفصول</option>
+                                </select>
                                 <button onclick="selectAllStudents()"
                                     style="padding: 5px 10px; font-size: 0.85rem; margin-left: 5px;">✅ تحديد
                                     الكل</button>
@@ -230,6 +238,9 @@
                                 <tr>
                                     <th>الاسم</th>
                                     <th>الجوال</th>
+                                    <th>الفصل</th>
+                                    <th>رقم الصف</th>
+                                    <th>رقم الطالب</th>
                                     <th>إجراء</th>
                                 </tr>
                             </thead>

@@ -258,10 +258,10 @@ module.exports = {
         return db.prepare('SELECT * FROM students WHERE tenant_id = ? ORDER BY created_at DESC').all(tenantId);
     },
 
-    addStudent: (tenantId, name, phone) => {
+    addStudent: (tenantId, name, phone, classNumber = null, studentId = null, gradeNumber = null) => {
         try {
-            return db.prepare('INSERT INTO students (tenant_id, name, phone_number) VALUES (?, ?, ?)')
-                .run(tenantId, name, phone);
+            return db.prepare('INSERT INTO students (tenant_id, name, phone_number, class_number, student_id, grade_number) VALUES (?, ?, ?, ?, ?, ?)')
+                .run(tenantId, name, phone, classNumber, studentId, gradeNumber);
         } catch (err) {
             if (err.message.includes('UNIQUE constraint')) {
                 throw new Error('Phone number already exists for this tenant');
@@ -271,12 +271,12 @@ module.exports = {
     },
 
     addStudentsBulk: (tenantId, students) => {
-        const insert = db.prepare('INSERT INTO students (tenant_id, name, phone_number) VALUES (?, ?, ?)');
+        const insert = db.prepare('INSERT INTO students (tenant_id, name, phone_number, class_number, student_id, grade_number) VALUES (?, ?, ?, ?, ?, ?)');
         let added = 0, skipped = 0;
 
         for (const student of students) {
             try {
-                insert.run(tenantId, student.name, student.phone);
+                insert.run(tenantId, student.name, student.phone, student.classNumber || null, student.studentId || null, student.gradeNumber || null);
                 added++;
             } catch (err) {
                 if (err.message.includes('UNIQUE constraint')) {
