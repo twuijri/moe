@@ -442,6 +442,20 @@ tenantRouter.get('/campaigns', (req, res) => {
     res.json(db.getCampaigns(req.tenantId));
 });
 
+// Get campaign details with messages
+tenantRouter.get('/campaigns/:id', (req, res) => {
+    const campaignId = parseInt(req.params.id);
+    const campaign = db.getCampaigns(req.tenantId).find(c => c.id === campaignId);
+
+    if (!campaign) {
+        return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    const messages = db.getCampaignMessages(req.tenantId, campaignId);
+    res.json({ ...campaign, messages });
+});
+
+
 tenantRouter.post('/campaign', (req, res) => {
     const { name, message, studentIds } = req.body;
     if (!message) return res.status(400).json({ error: 'Message required' });
