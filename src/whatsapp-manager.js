@@ -82,7 +82,10 @@ class WhatsAppManager {
                 this.status.set(tenantId, { ready: false, qr: url });
                 // Emit to socket if possible (needs socket instance)
                 if (this.io) {
+                    console.log(`Broadcasting QR to tenant_${tenantId} room`);
                     this.io.to(`tenant_${tenantId}`).emit('qr', url);
+                    // Also emit to all connected sockets (fallback)
+                    this.io.emit('qr', url);
                 }
             });
         });
@@ -91,8 +94,11 @@ class WhatsAppManager {
             console.log(`Client is ready for Tenant ${tenantId}`);
             this.status.set(tenantId, { ready: true, qr: null });
             if (this.io) {
+                console.log(`Broadcasting ready to tenant_${tenantId} room`);
                 this.io.to(`tenant_${tenantId}`).emit('ready');
                 this.io.to(`tenant_${tenantId}`).emit('status_update', { ready: true });
+                // Also emit to all (fallback)
+                this.io.emit('ready');
             }
         });
 
