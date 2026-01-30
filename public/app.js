@@ -488,43 +488,20 @@ async function viewCampaignDetails(id, name = null) {
     if (name) document.getElementById('campaign-title').innerText = `التفاصيل: ${name}`;
     currentCampaignId = id;
 
-    const res = await fetch(`${getApiBase()}/campaigns/${id}`);
-    const history = await res.json();
+    retryBtn.style.cursor = 'pointer';
+    retryBtn.innerText = `🔄 إعادة إرسال للفاشلين (${failedCount})`;
+} else {
+    retryBtn.disabled = true;
+    retryBtn.style.opacity = '0.5';
+    retryBtn.style.background = '#666';
+    retryBtn.style.cursor = 'not-allowed';
+    retryBtn.innerText = `🔄 إعادة إرسال للفاشلين (0)`;
+}
 
-    if (!Array.isArray(history)) {
-        console.error('History is not an array:', history);
-        return alert('Error loading details: ' + (history.error || 'Unknown error'));
-    }
+// Grab message from first entry if available for retry logic
+if (history.length > 0) currentCampaignMessage = history[0].message;
 
-    // UI Logic: Hide List, Show Details
-    document.getElementById('campaigns-list').style.display = 'none';
-    document.getElementById('campaign-details').style.display = 'block';
-
-    // Check for failures
-    const failedCount = history.filter(h => h.status.includes('FAILED')).length;
-    const retryBtn = document.getElementById('retry-btn');
-
-    // Always show button, but disable/style based on count
-    retryBtn.style.display = 'block';
-
-    if (failedCount > 0) {
-        retryBtn.disabled = false;
-        retryBtn.style.opacity = '1';
-        retryBtn.style.background = '#ffa500';
-        retryBtn.style.cursor = 'pointer';
-        retryBtn.innerText = `🔄 إعادة إرسال للفاشلين (${failedCount})`;
-    } else {
-        retryBtn.disabled = true;
-        retryBtn.style.opacity = '0.5';
-        retryBtn.style.background = '#666';
-        retryBtn.style.cursor = 'not-allowed';
-        retryBtn.innerText = `🔄 إعادة إرسال للفاشلين (0)`;
-    }
-
-    // Grab message from first entry if available for retry logic
-    if (history.length > 0) currentCampaignMessage = history[0].message;
-
-    document.getElementById('campaign-history-body').innerHTML = history.map(h => `
+document.getElementById('campaign-history-body').innerHTML = history.map(h => `
         <tr>
             <td>${h.recipient}</td>
             <td style="color: ${h.status === 'SENT' ? '#25d366' : '#ff5f5f'}">${h.status === 'SENT' ? 'تم الارسال' : 'فشل'}</td>
