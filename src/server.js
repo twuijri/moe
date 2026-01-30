@@ -8,6 +8,9 @@ const multer = require('multer');
 const xlsx = require('xlsx');
 const bcrypt = require('bcryptjs');
 
+// Run database migrations first
+require('./auto_migrate');
+
 const db = require('./db');
 const whatsappManager = require('./whatsapp-manager');
 const { extractTenant } = require('./middleware/tenant');
@@ -361,6 +364,17 @@ tenantRouter.post('/upload', requireAdmin, upload.single('file'), (req, res) => 
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
+});
+
+// Download Excel Template
+tenantRouter.get('/template', (req, res) => {
+    const templatePath = path.join(__dirname, '../public/templates/student_template.xlsx');
+    res.download(templatePath, 'نموذج_الطلاب.xlsx', (err) => {
+        if (err) {
+            console.error('Error downloading template:', err);
+            res.status(500).json({ error: 'Failed to download template' });
+        }
+    });
 });
 
 // Campaigns
