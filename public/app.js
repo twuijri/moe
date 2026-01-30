@@ -255,7 +255,7 @@ function renderStudentCheckboxes() {
 
         return `
         <label style="display: block; padding: 8px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05);" class="student-label">
-            <input type="checkbox" class="student-checkbox" value="${student.id}" checked style="margin-left: 8px;">
+            <input type="checkbox" class="student-checkbox" value="${student.id}" style="margin-left: 8px;">
             ${student.name} ${info ? `(${info})` : ''} - ${student.phone_number}
         </label>
     `;
