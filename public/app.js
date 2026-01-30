@@ -507,6 +507,22 @@ async function viewCampaignDetails(id, name = null) {
         document.getElementById('campaigns-list').style.display = 'none';
         document.getElementById('campaign-details').style.display = 'block';
 
+        // Update campaign title with message preview
+        if (name) {
+            document.getElementById('campaign-title').innerText = `التفاصيل: ${name}`;
+        }
+
+        // Display original message text
+        const messageDisplay = document.getElementById('campaign-message-display');
+        if (messageDisplay && campaign.message) {
+            messageDisplay.innerHTML = `
+                <div style="background: rgba(37,211,102,0.1); border-left: 3px solid #25d366; padding: 12px; margin: 10px 0; border-radius: 5px;">
+                    <strong style="color: #25d366;">📝 نص الرسالة الأصلية:</strong><br>
+                    <div style="margin-top: 8px; white-space: pre-wrap; color: #ddd;">${campaign.message}</div>
+                </div>
+            `;
+        }
+
         // Check for failures
         const failedCount = history.filter(h => h.status.includes('FAILED')).length;
         const retryBtn = document.getElementById('retry-btn');

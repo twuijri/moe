@@ -471,7 +471,7 @@ tenantRouter.post('/campaign', (req, res) => {
 
     if (targets.length === 0) return res.status(400).json({ error: 'No students selected' });
 
-    const result = db.createCampaign(req.tenantId, name || 'Campaign', targets.length, req.session.userId);
+    const result = db.createCampaign(req.tenantId, name || 'Campaign', targets.length, req.session.userId, message);
     const campaignId = result.lastInsertRowid;
 
     console.log(`Starting campaign ${campaignId} for Tenant ${req.tenantId}`);

@@ -71,6 +71,7 @@ db.exec(`
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         tenant_id INTEGER,
         name TEXT NOT NULL,
+        message TEXT,
         status TEXT DEFAULT 'processing',
         total_msg INTEGER DEFAULT 0,
         sent_msg INTEGER DEFAULT 0,
@@ -323,11 +324,11 @@ module.exports = {
     },
 
     // ===== CAMPAIGNS (Tenant-Aware) =====
-    createCampaign: (tenantId, name, totalMsg, createdBy) => {
+    createCampaign: (tenantId, name, totalMsg, createdBy, message) => {
         return db.prepare(`
-            INSERT INTO campaigns (tenant_id, name, total_msg, created_by) 
-            VALUES (?, ?, ?, ?)
-        `).run(tenantId, name, totalMsg, createdBy);
+            INSERT INTO campaigns (tenant_id, name, total_msg, created_by, message) 
+            VALUES (?, ?, ?, ?, ?)
+        `).run(tenantId, name, totalMsg, createdBy, message);
     },
 
     getCampaigns: (tenantId) => {
