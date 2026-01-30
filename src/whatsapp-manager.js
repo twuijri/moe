@@ -173,18 +173,43 @@ class WhatsAppManager {
     }
 
     async logout(tenantId) {
+        console.log(`Logging out WhatsApp for Tenant ${tenantId}`);
         const client = this.clients.get(tenantId);
+
         if (client) {
-            await client.logout();
-            await client.destroy();
+            try {
+                await client.logout();
+            } catch (err) {
+                console.error('Error during client logout:', err);
+            }
+
+            try {
+                await client.destroy();
+            } catch (err) {
+                console.error('Error during client destroy:', err);
+            }
+
             this.clients.delete(tenantId);
             this.status.delete(tenantId);
-            // Optionally delete auth folder
-            const authPath = path.join(__dirname, '../.wwebjs_auth', `session-tenant_${tenantId}`);
-            if (fs.existsSync(authPath)) {
+        }
+
+        // Delete auth folder
+        const authPath = path.join(__dirname, '../.wwebjs_auth', `session-tenant_${tenantId}`);
+        if (fs.existsSync(authPath)) {
+            console.log(`Deleting session folder: ${authPath}`);
+            try {
                 fs.rmSync(authPath, { recursive: true, force: true });
+                console.log(`Session folder deleted successfully`);
+            } catch (err) {
+                console.error('Error deleting session folder:', err);
             }
         }
+
+        // Force reinitialize client to get new QR
+        console.log(`Reinitializing client for Tenant ${tenantId}`);
+        setTimeout(() => {
+            this.getClient(tenantId);
+        }, 1000);
     }
 
     // Alias for consistency
