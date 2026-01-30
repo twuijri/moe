@@ -293,6 +293,14 @@ module.exports = {
         return db.prepare('DELETE FROM students WHERE tenant_id = ? AND id = ?').run(tenantId, studentId);
     },
 
+    updateCampaignStatus: (tenantId, campaignId, status) => {
+        db.prepare('UPDATE campaigns SET status = ? WHERE tenant_id = ? AND id = ?').run(status, tenantId, campaignId);
+    },
+
+    getCampaignMessages: (tenantId, campaignId) => {
+        return db.prepare('SELECT * FROM history WHERE tenant_id = ? AND campaign_id = ? ORDER BY timestamp DESC').all(tenantId, campaignId);
+    },
+
     updateStudentClassGrade: (tenantId, studentId, classNumber, gradeNumber) => {
         const updates = [];
         const params = [];
