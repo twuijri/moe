@@ -25,6 +25,20 @@ try {
     console.error('Schema check failed:', err);
 }
 
+// Migration: Add message column to campaigns table if missing
+try {
+    const campaignTableInfo = db.prepare("PRAGMA table_info(campaigns)").all();
+    const hasMessageColumn = campaignTableInfo.some(col => col.name === 'message');
+
+    if (campaignTableInfo.length > 0 && !hasMessageColumn) {
+        console.log('Adding message column to campaigns table...');
+        db.exec('ALTER TABLE campaigns ADD COLUMN message TEXT');
+        console.log('✅ Migration completed: message column added');
+    }
+} catch (err) {
+    console.error('Campaign migration failed:', err);
+}
+
 // Initialize Multi-Tenant Tables
 db.exec(`
     CREATE TABLE IF NOT EXISTS tenants (
