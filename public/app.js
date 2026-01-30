@@ -129,17 +129,31 @@ function showView(viewId) {
 }
 
 // --- Socket Events ---
-socket.on('status_update', updateStatus);
+console.log('Setting up socket event listeners...');
+
+socket.on('status_update', (data) => {
+    console.log('📡 Received status_update:', data);
+    updateStatus(data);
+});
+
 socket.on('qr', (url) => {
+    console.log('📱 Received QR code event, length:', url?.length);
     document.getElementById('qr-container').innerHTML = `<img src="${url}" alt="Scan QR" width="150">`;
     updateStatus({ ready: false, qr: url });
 });
+
 socket.on('ready', () => {
     console.log('✅ WhatsApp ready event received!');
     updateStatus({ ready: true });
 });
-socket.on('log', addLog);
+
+socket.on('log', (msg) => {
+    console.log('📝 Log:', msg);
+    addLog(msg);
+});
+
 socket.on('campaign_progress', (data) => {
+    console.log('📊 Campaign progress:', data);
     // OLD: fetchCampaigns(); // causing DOM thrashing
     // NEW: Update locally
     updateCampaignRow(data.id, data.type);
