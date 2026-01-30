@@ -293,6 +293,27 @@ module.exports = {
         return db.prepare('DELETE FROM students WHERE tenant_id = ? AND id = ?').run(tenantId, studentId);
     },
 
+    updateStudentClassGrade: (tenantId, studentId, classNumber, gradeNumber) => {
+        const updates = [];
+        const params = [];
+
+        if (classNumber !== null && classNumber !== undefined) {
+            updates.push('class_number = ?');
+            params.push(classNumber);
+        }
+
+        if (gradeNumber !== null && gradeNumber !== undefined) {
+            updates.push('grade_number = ?');
+            params.push(gradeNumber);
+        }
+
+        if (updates.length === 0) return { changes: 0 };
+
+        params.push(tenantId, studentId);
+        const query = `UPDATE students SET ${updates.join(', ')} WHERE tenant_id = ? AND id = ?`;
+        return db.prepare(query).run(...params);
+    },
+
     // ===== CAMPAIGNS (Tenant-Aware) =====
     createCampaign: (tenantId, name, totalMsg, createdBy) => {
         return db.prepare(`

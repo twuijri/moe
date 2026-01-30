@@ -120,6 +120,7 @@ async function fetchStudents() {
     const tbody = document.getElementById('students-table-body');
     tbody.innerHTML = students.map(s => `
         <tr>
+            <td><input type="checkbox" class="student-row-checkbox" value="${s.id}" style="cursor: pointer;"></td>
             <td>${s.name}</td>
             <td>${s.phone_number}</td>
             <td>${s.class_number || '-'}</td>
@@ -128,6 +129,82 @@ async function fetchStudents() {
             <td>${currentUser.role === 'admin' ? `<button class="danger-btn" onclick="deleteStudent(${s.id})">حذف</button>` : '-'}</td>
         </tr>
     `).join('');
+}
+
+function toggleAllStudents() {
+    const selectAll = document.getElementById('select-all-students');
+    const checkboxes = document.querySelectorAll('.student-row-checkbox');
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+}
+
+function getSelectedStudentIds() {
+    const checkboxes = document.querySelectorAll('.student-row-checkbox:checked');
+    return Array.from(checkboxes).map(cb => parseInt(cb.value));
+}
+
+async function bulkDeleteStudents() {
+    const ids = getSelectedStudentIds();
+    if (ids.length === 0) return alert('الرجاء تحديد طلاب للحذف');
+    if (!confirm(`هل تريد حذف ${ids.length} طالب/طالبة؟`)) return;
+
+    try {
+        const res = await fetch(`${getApiBase()}/students/bulk-delete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        alert(`تم حذف ${data.deleted} طالب/طالبة`);
+        document.getElementById('select-all-students').checked = false;
+        fetchStudents();
+    } catch (err) {
+        alert(err.message);
+    }
+}
+
+function openBulkEditModal() {
+    const ids = getSelectedStudentIds();
+    if (ids.length === 0) return alert('الرجاء تحديد طلاب للتعديل');
+    document.getElementById('bulk-edit-modal').style.display = 'flex';
+}
+
+function closeBulkEditModal() {
+    document.getElementById('bulk-edit-modal').style.display = 'none';
+    document.getElementById('bulk-class-number').value = '';
+    document.getElementById('bulk-grade-number').value = '';
+}
+
+async function saveBulkEdit() {
+    const ids = getSelectedStudentIds();
+    const classNumber = document.getElementById('bulk-class-number').value;
+    const gradeNumber = document.getElementById('bulk-grade-number').value;
+
+    if (!classNumber && !gradeNumber) {
+        return alert('الرجاء إدخال رقم الفصل أو رقم الصف');
+    }
+
+    try {
+        const res = await fetch(`${getApiBase()}/students/bulk-edit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ids,
+                classNumber: classNumber ? parseInt(classNumber) : null,
+                gradeNumber: gradeNumber || null
+            })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        alert(`تم تعديل ${data.updated} طالب/طالبة`);
+        closeBulkEditModal();
+        document.getElementById('select-all-students').checked = false;
+        fetchStudents();
+    } catch (err) {
+        alert(err.message);
+    }
 }
 
 async function deleteStudent(id) {

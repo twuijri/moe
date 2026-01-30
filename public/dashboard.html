@@ -208,10 +208,13 @@
                     <h2>إدارة الطلاب</h2>
                     <div
                         style="display: flex; gap: 1rem; margin-bottom: 1rem; align-items: center; justify-content: space-between;">
-                        <div style="display: flex; gap: 10px;">
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                             <button onclick="openModal()" style="background: #007bff;">📂 استيراد Excel</button>
                             <button onclick="downloadTemplate()" style="background: #17a2b8;">📥 تحميل نموذج
                                 Excel</button>
+                            <button onclick="bulkDeleteStudents()" style="background: #dc3545;">🗑️ حذف المحدد</button>
+                            <button onclick="openBulkEditModal()" style="background: #ffc107; color: #000;">✏️ تعديل
+                                المحدد</button>
                         </div>
                         <input type="text" id="search-student" placeholder="بحث..." onkeyup="filterStudents()"
                             style="margin:0; width: 200px;">
@@ -236,6 +239,10 @@
                         <table id="students-table">
                             <thead>
                                 <tr>
+                                    <th style="width: 40px;">
+                                        <input type="checkbox" id="select-all-students" onchange="toggleAllStudents()"
+                                            style="cursor: pointer;">
+                                    </th>
                                     <th>الاسم</th>
                                     <th>الجوال</th>
                                     <th>الفصل</th>
@@ -319,6 +326,25 @@
             <br><br>
             <button onclick="uploadExcel()">رفع الملف 📤</button>
             <button onclick="closeModal()" class="danger-btn">إلغاء ❌</button>
+        </div>
+    </div>
+
+    <!-- Bulk Edit Modal -->
+    <div id="bulk-edit-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <h3>تعديل الطلاب المحددين</h3>
+            <div style="margin: 20px 0;">
+                <label>الفصل:</label>
+                <input type="number" id="bulk-class-number" placeholder="رقم الفصل (مثلاً: 1)" style="width: 100%;">
+            </div>
+            <div style="margin: 20px 0;">
+                <label>رقم الصف:</label>
+                <input type="text" id="bulk-grade-number" placeholder="رقم الصف (مثلاً: 1314)" style="width: 100%;">
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button onclick="closeBulkEditModal()" style="background: #666;">إلغاء</button>
+                <button onclick="saveBulkEdit()" style="background: #28a745;">حفظ التعديلات</button>
+            </div>
         </div>
     </div>
 

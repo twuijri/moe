@@ -316,6 +316,54 @@ tenantRouter.delete('/students/:id', requireAdmin, (req, res) => {
     }
 });
 
+// Bulk Delete Students
+tenantRouter.post('/students/bulk-delete', requireAdmin, (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ error: 'No student IDs provided' });
+        }
+
+        let deleted = 0;
+        for (const id of ids) {
+            try {
+                db.deleteStudent(req.tenantId, id);
+                deleted++;
+            } catch (err) {
+                console.error(`Failed to delete student ${id}:`, err);
+            }
+        }
+
+        res.json({ success: true, deleted });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Bulk Edit Students
+tenantRouter.post('/students/bulk-edit', requireAdmin, (req, res) => {
+    try {
+        const { ids, classNumber, gradeNumber } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ error: 'No student IDs provided' });
+        }
+
+        let updated = 0;
+        for (const id of ids) {
+            try {
+                db.updateStudentClassGrade(req.tenantId, id, classNumber, gradeNumber);
+                updated++;
+            } catch (err) {
+                console.error(`Failed to update student ${id}:`, err);
+            }
+        }
+
+        res.json({ success: true, updated });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 
 tenantRouter.post('/upload', requireAdmin, upload.single('file'), (req, res) => {
